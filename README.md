@@ -1,7 +1,7 @@
 # Deep-Image-Matting
 This is tensorflow implementation for paper "Deep Image Matting".
 
-Thanks to Davi Frossard, "vgg16_weights.npz" can be found his blog:
+Thanks to Davi Frossard, "vgg16_weights.npz" can be found in his blog:
 "https://www.cs.toronto.edu/~frossard/post/vgg16/"
 
 2017-8-25:
