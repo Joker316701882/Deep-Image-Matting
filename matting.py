@@ -114,6 +114,10 @@ def preprocessing_single(comp_RGB, alpha, BG, FG, batch_RGB_paths,i,image_size=3
 	if crop_size == 620:
 		h_start_index = i_UR_center[0] - 309
 		w_start_index = i_UR_center[1] - 309
+		if h_start_index<0:
+			h_start_index = 0
+		if w_start_index<0:
+			w_start_index = 0
 		tmp = train_pre[h_start_index:h_start_index+620, w_start_index:w_start_index+620, :]
 		if flip:
 			tmp = tmp[:,::-1,:]
