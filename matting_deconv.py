@@ -1,21 +1,26 @@
+'''
+deconv_simple_v2.py
+change the input image size and rearrange all data.
+
+'''
+
 import tensorflow as tf
 import numpy as np
-from matting import unpool,preprocessing,composition_RGB,load_path,load_data
+from matting import composition_RGB,load_path,load_data
 import os
 from scipy import misc
 
 image_size = 320
-input_image_size = 650
 batch_size = 25
 max_epochs = 1000000
 
 #pretrained_vgg_model_path
 model_path = './vgg16_weights.npz'
 log_dir = './tensor_log'
-dataset_RGB = '/data/gezheng/data-matting/comp_RGB'
-dataset_alpha = './alpha_final'
-dataset_FG = './FG_final'
-dataset_BG = '/data/gezheng/data-matting/BG'
+dataset_RGB = '/data/gezheng/data-matting/new/comp_RGB'
+dataset_alpha = '/data/gezheng/data-matting/new/alpha_final'
+dataset_FG = '/data/gezheng/data-matting/new/FG_final'
+dataset_BG = '/data/gezheng/data-matting/new/BG'
 
 paths_RGB,paths_alpha,paths_FG,paths_BG = load_path(dataset_RGB,dataset_alpha,dataset_FG,dataset_BG)
 
@@ -26,35 +31,32 @@ batchs_per_epoch = int(range_size/batch_size)
 index_queue = tf.train.range_input_producer(range_size, num_epochs=None,shuffle=True, seed=None, capacity=32)
 index_dequeue_op = index_queue.dequeue_many(batch_size, 'index_dequeue')
 
-image_batch = tf.placeholder(tf.float32, shape=(batch_size,input_image_size,input_image_size,3))
-GT_matte_batch = tf.placeholder(tf.float32, shape = (batch_size,input_image_size,input_image_size,1))
-GTBG_batch = tf.placeholder(tf.float32, shape = (batch_size,input_image_size,input_image_size,3))
-GTFG_batch = tf.placeholder(tf.float32, shape = (batch_size,input_image_size,input_image_size,3))
+image_batch = tf.placeholder(tf.float32, shape=(batch_size,image_size,image_size,3))
+GT_matte_batch = tf.placeholder(tf.float32, shape = (batch_size,image_size,image_size,1))
+GT_trimap = tf.placeholder(tf.float32, shape = (batch_size,image_size,image_size,1))
+GTBG_batch = tf.placeholder(tf.float32, shape = (batch_size,image_size,image_size,3))
+GTFG_batch = tf.placeholder(tf.float32, shape = (batch_size,image_size,image_size,3))
 is_train = tf.placeholder(tf.bool, name = 'is_train')
 en_parameters = []
-#if training:
-#b_input, b_GTmatte ,b_GTBG, b_GTFG = preprocessing(image_batch,GT_matte_batch,GTBG_batch,GTFG_batch,image_size)
-#[b_input, b_GTmatte ,b_GTBG, b_GTFG] = tf.py_func(preprocessing,[image_batch,GT_matte_batch,GTBG_batch,GTFG_batch,image_size],tf.float32)
-if is_train:
-    b_RGB,b_trimap, b_GTmatte ,b_GTBG, b_GTFG = tf.py_func(preprocessing,[image_batch,GT_matte_batch,GTBG_batch,GTFG_batch,image_size],[tf.float32,tf.float32,tf.float32,tf.float32,tf.float32])
-else:
-    pass
 
-tf.summary.image('GT_alpha',b_GTmatte,max_outputs = 5)
-tf.summary.image('trimap',b_trimap,max_outputs = 5)
+tf.summary.image('GT_matte_batch',GT_matte_batch,max_outputs = 5)
+tf.summary.image('trimap',GT_trimap,max_outputs = 5)
+tf.summary.image('image_batch',image_batch,max_outputs = 5)
 
-b_RGB.set_shape([batch_size,image_size,image_size,3])
-b_trimap.set_shape([batch_size,image_size,image_size,1])
+# b_RGB.set_shape([batch_size,image_size,image_size,3])
+# b_trimap.set_shape([batch_size,image_size,image_size,1])
+# b_input = tf.concat([b_RGB,b_trimap],3)
+# b_GTmatte.set_shape([batch_size,image_size,image_size,1])
+# b_GTBG.set_shape([batch_size,image_size,image_size,3])
+# b_GTFG.set_shape([batch_size,image_size,image_size,3])
+
+b_RGB = tf.identity(image_batch,name = 'b_RGB')
+b_trimap = tf.identity(GT_trimap,name = 'b_trimap')
+b_GTmatte = tf.identity(GT_matte_batch,name = 'b_GTmatte')
+b_GTBG = tf.identity(GTBG_batch,name = 'b_GTBG')
+b_GTFG = tf.identity(GTFG_batch,name = 'b_GTFG')
+
 b_input = tf.concat([b_RGB,b_trimap],3)
-b_GTmatte.set_shape([batch_size,image_size,image_size,1])
-b_GTBG.set_shape([batch_size,image_size,image_size,3])
-b_GTFG.set_shape([batch_size,image_size,image_size,3])
-
-b_RGB = tf.identity(b_RGB,name = 'b_RGB')
-b_trimap = tf.identity(b_trimap,name = 'b_trimap')
-b_GTmatte = tf.identity(b_GTmatte,name = 'b_GTmatte')
-b_GTBG = tf.identity(b_GTBG,name = 'b_GTBG')
-b_GTFG = tf.identity(b_GTFG,name = 'b_GTFG')
 #else:
  #   preprocessing(image_batch)
 
@@ -224,68 +226,33 @@ pool5 = tf.nn.max_pool(conv5_3,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='
 
 training = True
 
-#deconv6_1
-with tf.variable_scope('deconv6_1') as scope:
-    outputs = tf.layers.conv2d_transpose(pool5, 512, [1, 1], strides=(1, 1), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
-    #deconv6_1 = tf.nn.relu(outputs)
-    deconv6_1 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
 #deconv6_2
 with tf.variable_scope('deconv6_2') as scope:
-    outputs = tf.layers.conv2d_transpose(deconv6_1, 512, [3, 3], strides=(2, 2), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
+    outputs = tf.layers.conv2d_transpose(pool5, 512, [3, 3], strides=(2, 2), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
     #deconv6_2 = tf.nn.relu(outputs)
     deconv6_2 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
 
-#deconv5_1
-with tf.variable_scope('deconv5_1') as scope:
-    outputs = tf.layers.conv2d_transpose(deconv6_2, 512, [5, 5], strides=(1, 1), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
-    #deconv5_1 = tf.nn.relu(outputs)
-    deconv5_1 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
-
-#deconv5_2
-with tf.variable_scope('deconv5_2') as scope:
-    outputs = tf.layers.conv2d_transpose(deconv5_1, 512, [3, 3], strides=(2, 2), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
-    #deconv5_2 = tf.nn.relu(outputs)
-    deconv5_2 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
-
-#deconv4_1
-with tf.variable_scope('deconv4_1') as scope:
-    outputs = tf.layers.conv2d_transpose(deconv5_2, 256, [5, 5], strides=(1, 1), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
-    #deconv4_1= tf.nn.relu(outputs)
-    deconv4_1 =tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
-
 #deconv4_2
-with tf.variable_scope('deconv4_2') as scope:
-    outputs = tf.layers.conv2d_transpose(deconv4_1, 256, [3, 3], strides=(2, 2), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
+with tf.variable_scope('deconv4_1') as scope:
+    outputs = tf.layers.conv2d_transpose(deconv6_2, 256, [3, 3], strides=(2, 2), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
     #deconv4_2= tf.nn.relu(outputs)
-    deconv4_2 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
-
-#deconv3_1
-with tf.variable_scope('deconv3_1') as scope:
-    outputs = tf.layers.conv2d_transpose(deconv4_2, 128, [5, 5], strides=(1, 1), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
-    #deconv3_1 = tf.nn.relu(outputs)
-    deconv3_1 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
+    deconv4_1 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
 
 #deconv3_2
-with tf.variable_scope('deconv3_2') as scope:
-    outputs = tf.layers.conv2d_transpose(deconv3_1, 128, [3, 3], strides=(2, 2), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
+with tf.variable_scope('deconv3_1') as scope:
+    outputs = tf.layers.conv2d_transpose(deconv4_1, 128, [3, 3], strides=(2, 2), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
     #deconv3_2 = tf.nn.relu(outputs)
-    deconv3_2 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
-
-#deconv2_1
-with tf.variable_scope('deconv2_1') as scope:
-    outputs = tf.layers.conv2d_transpose(deconv3_2, 64, [5, 5], strides=(1, 1), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
-    #deconv2_1 = tf.nn.relu(outputs)
-    deconv2_1 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
+    deconv3_1 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
 
 #deconv2_2
-with tf.variable_scope('deconv2_2') as scope:
-    outputs = tf.layers.conv2d_transpose(deconv2_1, 64, [3, 3], strides=(2, 2), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
+with tf.variable_scope('deconv2_1') as scope:
+    outputs = tf.layers.conv2d_transpose(deconv3_1, 64, [3, 3], strides=(2, 2), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
 #    deconv2_2 = tf.nn.relu(outputs)
-    deconv2_2 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
+    deconv2_1 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
 
 #deconv1
 with tf.variable_scope('deconv1') as scope:
-    outputs = tf.layers.conv2d_transpose(deconv2_2, 64, [5, 5], strides=(1, 1), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
+    outputs = tf.layers.conv2d_transpose(deconv2_1, 32, [5, 5], strides=(2, 2), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
     #deconv1 = tf.nn.relu(outputs)
     deconv1 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
 
@@ -320,14 +287,14 @@ with tf.variable_scope('loss') as scope:
     total_loss = tf.reduce_sum(wl * alpha_diff + (2-wl) * c_diff) / batch_size
     tf.summary.scalar('total_loss',total_loss)
     global_step = tf.Variable(0,trainable=False)
-    train_op = tf.train.AdamOptimizer(learning_rate = 1e-6).minimize(total_loss,global_step = global_step)
+    train_op = tf.train.AdamOptimizer(learning_rate = 1e-5).minimize(total_loss,global_step = global_step)
 
     coord = tf.train.Coordinator()
     summary_op = tf.summary.merge_all()
     summary_writer = tf.summary.FileWriter(log_dir, tf.get_default_graph())
 
 
-gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction = 0.5)
+#gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction = 0.5)
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
     tf.train.start_queue_runners(coord=coord,sess=sess)
@@ -345,22 +312,26 @@ with tf.Session() as sess:
         else:
             sess.run(en_parameters[i].assign(weights[k]))
     print('finish loading vgg16 model')
-	#load train data
+    #load train data
     while epoch_num < max_epochs:
-        print('epoch %d' % epoch_num)	
+        print('epoch %d' % epoch_num)   
         while batch_num < batchs_per_epoch:
             print('batch %d, loading batch data...' % batch_num)
             batch_index = sess.run(index_dequeue_op)
-            batch_RGB_paths = np.array(paths_RGB)[batch_index]
-            batch_alpha_paths = np.array(paths_alpha)[batch_index]
-            batch_FG_paths = np.array(paths_FG)[batch_index]
-            batch_BG_paths = np.array(paths_BG)[batch_index]
-
-            batch_RGBs,batch_alphas,batch_FGs,batch_BGs = load_data(batch_RGB_paths,batch_alpha_paths,batch_FG_paths,batch_BG_paths)
-            feed = {image_batch:batch_RGBs.eval(), GT_matte_batch:batch_alphas.eval(), GTBG_batch:batch_BGs.eval(), GTFG_batch:batch_FGs.eval(),is_train:True}
+            batch_RGB_paths = paths_RGB[batch_index]
+            batch_alpha_paths = paths_alpha[batch_index]
+            batch_FG_paths = paths_FG[batch_index]
+            batch_BG_paths = paths_BG[batch_index]
+            print('finish loading path')
+            batch_RGBs,batch_trimaps,batch_alphas,batch_FGs,batch_BGs = load_data(sess,batch_RGB_paths,batch_alpha_paths,batch_FG_paths,batch_BG_paths)
+            
+            # feed = {image_batch:batch_RGBs.eval(), GT_matte_batch:batch_alphas.eval(),GT_trimap:batch_trimaps, GTBG_batch:batch_BGs.eval(), GTFG_batch:batch_FGs.eval(),is_train:True}
+            feed = {image_batch:batch_RGBs, GT_matte_batch:batch_alphas,GT_trimap:batch_trimaps, GTBG_batch:batch_BGs, GTFG_batch:batch_FGs,is_train:True}
             _,loss,summary_str,step,p_mattes = sess.run([train_op,total_loss,summary_op,global_step,pred_mattes],feed_dict = feed)
             misc.imsave('./predict/alpha.jpg',p_mattes[0,:,:,0])
             summary_writer.add_summary(summary_str,global_step = step)
             print('loss is %f' %loss)
             batch_num += 1
         epoch_num += 1
+
+
