@@ -3,15 +3,15 @@ deconv_simple_v2.py
 change the input image size and rearrange all data.
 
 '''
-
 import tensorflow as tf
 import numpy as np
 from matting import composition_RGB,load_path,load_data
 import os
 from scipy import misc
 
+
 image_size = 320
-batch_size = 25
+batch_size = 30
 max_epochs = 1000000
 
 #pretrained_vgg_model_path
@@ -251,8 +251,14 @@ with tf.variable_scope('deconv2_1') as scope:
     deconv2_1 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
 
 #deconv1
-with tf.variable_scope('deconv1') as scope:
+with tf.variable_scope('deconv1_1') as scope:
     outputs = tf.layers.conv2d_transpose(deconv2_1, 32, [5, 5], strides=(2, 2), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
+    #deconv1 = tf.nn.relu(outputs)
+    deconv1_1 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
+
+#deconv1
+with tf.variable_scope('deconv1') as scope:
+    outputs = tf.layers.conv2d_transpose(deconv1_1, 32, [5, 5], strides=(1, 1), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
     #deconv1 = tf.nn.relu(outputs)
     deconv1 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
 
@@ -282,8 +288,10 @@ with tf.variable_scope('loss') as scope:
     # wl = np.ones([batch_size,image_size,image_size,1]).fill(0.5)
     # wl[np.where(b_GTmatte == 0.5)] = 1.5
     #wl_tmp = tf.fill([batch_size,image_size,image_size,1],0.5)
-    wl = tf.where(tf.equal(b_GTmatte,0.5), tf.fill([batch_size,image_size,image_size,1],1.5) ,tf.fill([batch_size,image_size,image_size,1],0.5))
-
+    wl = tf.where(tf.equal(b_trimap,0.5), tf.fill([batch_size,image_size,image_size,1],1.5) ,tf.fill([batch_size,image_size,image_size,1],0.5))
+    
+    tf.summary.histogram('loss_weight',wl)
+    
     total_loss = tf.reduce_sum(wl * alpha_diff + (2-wl) * c_diff) / batch_size
     tf.summary.scalar('total_loss',total_loss)
     global_step = tf.Variable(0,trainable=False)
@@ -298,7 +306,6 @@ with tf.variable_scope('loss') as scope:
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
     tf.train.start_queue_runners(coord=coord,sess=sess)
-
     batch_num = 0
     epoch_num = 0
     #initialize all parameters in vgg16
@@ -313,6 +320,7 @@ with tf.Session() as sess:
             sess.run(en_parameters[i].assign(weights[k]))
     print('finish loading vgg16 model')
     #load train data
+    sess.graph.finalize()
     while epoch_num < max_epochs:
         print('epoch %d' % epoch_num)   
         while batch_num < batchs_per_epoch:
@@ -323,9 +331,8 @@ with tf.Session() as sess:
             batch_FG_paths = paths_FG[batch_index]
             batch_BG_paths = paths_BG[batch_index]
             print('finish loading path')
-            batch_RGBs,batch_trimaps,batch_alphas,batch_FGs,batch_BGs = load_data(sess,batch_RGB_paths,batch_alpha_paths,batch_FG_paths,batch_BG_paths)
-            
-            # feed = {image_batch:batch_RGBs.eval(), GT_matte_batch:batch_alphas.eval(),GT_trimap:batch_trimaps, GTBG_batch:batch_BGs.eval(), GTFG_batch:batch_FGs.eval(),is_train:True}
+            sess.graph.finalize()
+            batch_RGBs,batch_trimaps,batch_alphas,batch_FGs,batch_BGs = load_data(batch_RGB_paths,batch_alpha_paths,batch_FG_paths,batch_BG_paths)
             feed = {image_batch:batch_RGBs, GT_matte_batch:batch_alphas,GT_trimap:batch_trimaps, GTBG_batch:batch_BGs, GTFG_batch:batch_FGs,is_train:True}
             _,loss,summary_str,step,p_mattes = sess.run([train_op,total_loss,summary_op,global_step,pred_mattes],feed_dict = feed)
             misc.imsave('./predict/alpha.jpg',p_mattes[0,:,:,0])

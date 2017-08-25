@@ -24,7 +24,7 @@ def composition_RGB(BG,FG,p_matte):
 	GB = tf.convert_to_tensor(BG)
 	FG = tf.convert_to_tensor(FG)
 	return p_matte * FG + (1 - p_matte) * BG
-			
+
 # def global_mean(RGB_folder):
 # 	RGBs = os.listdir(RGB_folder)
 # 	num = len(RGBs)
@@ -48,27 +48,22 @@ def load_path(dataset_RGB,alpha,FG,BG):
 	BGs_abspath = [os.path.join(BG,RGB.split('-')[0],RGB.split('-')[1][:-3]+'jpg') for RGB in RGBs_path]
 	return np.array(RGBs_abspath),np.array(alphas_abspath),np.array(FGs_abspath),np.array(BGs_abspath)
 
-def load_data(sess,batch_RGB_paths,batch_alpha_paths,batch_FG_paths,batch_BG_paths):
+def load_data(batch_RGB_paths,batch_alpha_paths,batch_FG_paths,batch_BG_paths):
 	
 	batch_size = batch_RGB_paths.shape[0]
 	train_batch = []
 	for i in range(batch_size):
-		comp_RGB_content = tf.read_file(tf.convert_to_tensor(batch_RGB_paths[i]))
-		comp_RGB = tf.cast(tf.image.decode_png(comp_RGB_content),tf.float32)
+		comp_RGB = misc.imread(batch_RGB_paths[i]).astype(np.float32)		
 		
-		alpha_content = tf.read_file(tf.convert_to_tensor(batch_alpha_paths[i]))
-		alpha = tf.cast(tf.image.decode_png(alpha_content),tf.float32)
+		alpha = misc.imread(batch_alpha_paths[i],'L').astype(np.float32)
+
+		FG = misc.imread(batch_FG_paths[i]).astype(np.float32)
+
+		BG = misc.imread(batch_BG_paths[i]).astype(np.float32)
 		
-		FG_content = tf.read_file(tf.convert_to_tensor(batch_FG_paths[i]))
-		FG = tf.cast(tf.image.decode_png(FG_content),tf.float32)
-		
-		BG_content = tf.read_file(tf.convert_to_tensor(batch_BG_paths[i]))
-		BG = tf.cast(tf.image.decode_jpeg(BG_content),tf.float32)
-		print('##########')
-		batch_i = tf.py_func(preprocessing_single,[comp_RGB, alpha, BG, FG, 320],tf.float32)
-		batch_i.set_shape([320,320,11])	
+		batch_i = preprocessing_single(comp_RGB, alpha, BG, FG, batch_RGB_paths,i)	
 		train_batch.append(batch_i)
-	train_batch = sess.run(tf.stack(train_batch))
+	train_batch = np.stack(train_batch)
 	return train_batch[:,:,:,:3],np.expand_dims(train_batch[:,:,:,3],3),np.expand_dims(train_batch[:,:,:,4],3),train_batch[:,:,:,5:8],train_batch[:,:,:,8:]
 
 def generate_trimap(trimap,alpha):
@@ -77,19 +72,18 @@ def generate_trimap(trimap,alpha):
 	trimap[np.where((ndimage.grey_dilation(alpha[:,:,0],size=(k_size,k_size)) - ndimage.grey_erosion(alpha[:,:,0],size=(k_size,k_size)))!=0)] = 127.5
 	return trimap
 
-def preprocessing_single(comp_RGB, alpha, BG, FG, image_size=320):
+def preprocessing_single(comp_RGB, alpha, BG, FG, batch_RGB_paths,i,image_size=320,):
 
-	g_mean = np.array(([126.88987627,120.24313843,112.19594981])).reshape([1,1,3])
+	g_mean = np.array(([126.88,120.24,112.19])).reshape([1,1,3])
+	alpha = np.expand_dims(alpha,2)
 	trimap = np.copy(alpha)
 	#trimap_batch = copy.deepcopy(GTmatte_batch)
 	trimap = generate_trimap(trimap,alpha)
 
 	train_pre = np.concatenate([comp_RGB,trimap,alpha,BG,FG],2)
 	train_data = np.zeros([image_size,image_size,11])
-	crop_size = random.choice([320,480,640])
-	print(crop_size)
+	crop_size = random.choice([320,480,620])
 	flip = random.choice([0,1])
-	print(flip)
 	i_UR_center = UR_center(train_pre)
 
 	if crop_size == 320:
@@ -117,10 +111,10 @@ def preprocessing_single(comp_RGB, alpha, BG, FG, image_size=320):
 		tmp1[:,:,8:] = misc.imresize(tmp[:,:,8:],[image_size,image_size,3])
 		train_data = tmp1
 
-	if crop_size == 640:
-		h_start_index = i_UR_center[0] - 319
-		w_start_index = i_UR_center[1] - 319
-		tmp = train_pre[h_start_index:h_start_index+640, w_start_index:w_start_index+640, :]
+	if crop_size == 620:
+		h_start_index = i_UR_center[0] - 309
+		w_start_index = i_UR_center[1] - 309
+		tmp = train_pre[h_start_index:h_start_index+620, w_start_index:w_start_index+620, :]
 		if flip:
 			tmp = tmp[:,::-1,:]
 		tmp1 = np.zeros([image_size,image_size,11])
