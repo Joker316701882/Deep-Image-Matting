@@ -330,8 +330,7 @@ with tf.Session() as sess:
             batch_alpha_paths = paths_alpha[batch_index]
             batch_FG_paths = paths_FG[batch_index]
             batch_BG_paths = paths_BG[batch_index]
-            print('finish loading path')
-            sess.graph.finalize()
+
             batch_RGBs,batch_trimaps,batch_alphas,batch_FGs,batch_BGs = load_data(batch_RGB_paths,batch_alpha_paths,batch_FG_paths,batch_BG_paths)
             feed = {image_batch:batch_RGBs, GT_matte_batch:batch_alphas,GT_trimap:batch_trimaps, GTBG_batch:batch_BGs, GTFG_batch:batch_FGs,is_train:True}
             _,loss,summary_str,step,p_mattes = sess.run([train_op,total_loss,summary_op,global_step,pred_mattes],feed_dict = feed)
