@@ -5,7 +5,7 @@ change the input image size and rearrange all data.
 '''
 import tensorflow as tf
 import numpy as np
-from matting_numpy_v2 import composition_RGB,load_path,load_data,load_test_data
+from matting import composition_RGB,load_path,load_data,load_test_data
 import os
 from scipy import misc
 
