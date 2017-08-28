@@ -21,8 +21,8 @@ def UR_center(image):
 	return  np.array(target)[:,index][:2]
 
 def composition_RGB(BG,FG,p_matte):
-	GB = tf.convert_to_tensor(BG)
-	FG = tf.convert_to_tensor(FG)
+	# GB = tf.convert_to_tensor(BG)
+	# FG = tf.convert_to_tensor(FG)
 	return p_matte * FG + (1 - p_matte) * BG
 
 # def global_mean(RGB_folder):
