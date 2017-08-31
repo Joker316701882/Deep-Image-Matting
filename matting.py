@@ -9,6 +9,7 @@ from sys import getrefcount
 import gc
 
 trimap_kernel = [val for val in range(20,35)]
+g_mean = np.array(([126.88,120.24,112.19])).reshape([1,1,3])
 
 def UR_center(image):
 	'''
@@ -16,14 +17,13 @@ def UR_center(image):
 	centered on unknown region
 	'''
 	trimap = image[:,:,3]
-	target = np.where(trimap==127.5)
+	target = np.where(trimap==128)
 	index = random.choice([i for i in range(len(target[0]))])
 	return  np.array(target)[:,index][:2]
 
-def composition_RGB(BG,FG,p_matte):
-	# GB = tf.convert_to_tensor(BG)
-	# FG = tf.convert_to_tensor(FG)
-	return p_matte * FG + (1 - p_matte) * BG
+# def composition_RGB(BG,FG,p_matte):
+
+# 	return p_matte * FG + (1 - p_matte) * BG
 
 # def global_mean(RGB_folder):
 # 	RGBs = os.listdir(RGB_folder)
@@ -52,6 +52,7 @@ def load_data(batch_RGB_paths,batch_alpha_paths,batch_FG_paths,batch_BG_paths):
 	
 	batch_size = batch_RGB_paths.shape[0]
 	train_batch = []
+	images_without_mean_reduction = []
 	for i in range(batch_size):
 		comp_RGB = misc.imread(batch_RGB_paths[i]).astype(np.float32)		
 		
@@ -61,20 +62,20 @@ def load_data(batch_RGB_paths,batch_alpha_paths,batch_FG_paths,batch_BG_paths):
 
 		BG = misc.imread(batch_BG_paths[i]).astype(np.float32)
 		
-		batch_i = preprocessing_single(comp_RGB, alpha, BG, FG, batch_RGB_paths,i)	
+		batch_i,raw_RGB = preprocessing_single(comp_RGB, alpha, BG, FG,i)	
 		train_batch.append(batch_i)
+		images_without_mean_reduction.append(raw_RGB)
 	train_batch = np.stack(train_batch)
-	return train_batch[:,:,:,:3],np.expand_dims(train_batch[:,:,:,3],3),np.expand_dims(train_batch[:,:,:,4],3),train_batch[:,:,:,5:8],train_batch[:,:,:,8:]
+	return train_batch[:,:,:,:3],np.expand_dims(train_batch[:,:,:,3],3),np.expand_dims(train_batch[:,:,:,4],3),train_batch[:,:,:,5:8],train_batch[:,:,:,8:],images_without_mean_reduction
 
 def generate_trimap(trimap,alpha):
 
 	k_size = random.choice(trimap_kernel)
-	trimap[np.where((ndimage.grey_dilation(alpha[:,:,0],size=(k_size,k_size)) - ndimage.grey_erosion(alpha[:,:,0],size=(k_size,k_size)))!=0)] = 127.5
+	trimap[np.where((ndimage.grey_dilation(alpha[:,:,0],size=(k_size,k_size)) - ndimage.grey_erosion(alpha[:,:,0],size=(k_size,k_size)))!=0)] = 128
 	return trimap
 
-def preprocessing_single(comp_RGB, alpha, BG, FG, batch_RGB_paths,i,image_size=320,):
+def preprocessing_single(comp_RGB, alpha, BG, FG,i,image_size=320):
 
-	g_mean = np.array(([126.88,120.24,112.19])).reshape([1,1,3])
 	alpha = np.expand_dims(alpha,2)
 	trimap = np.copy(alpha)
 	#trimap_batch = copy.deepcopy(GTmatte_batch)
@@ -86,6 +87,7 @@ def preprocessing_single(comp_RGB, alpha, BG, FG, batch_RGB_paths,i,image_size=3
 	flip = random.choice([0,1])
 	i_UR_center = UR_center(train_pre)
 
+
 	if crop_size == 320:
 		h_start_index = i_UR_center[0] - 159
 		w_start_index = i_UR_center[1] - 159
@@ -93,7 +95,8 @@ def preprocessing_single(comp_RGB, alpha, BG, FG, batch_RGB_paths,i,image_size=3
 		if flip:
 			tmp = tmp[:,::-1,:]
 		# tmp[:,:,:3] = tmp[:,:,:3] - mean
-		tmp[:,:,3:5] = tmp[:,:,3:5] / 255.0
+		tmp[:,:,3:5] = tmp[:,:,3:5] / 256.0
+		raw_RGB = tmp[:,:,:3]
 		tmp[:,:,:3] -= g_mean
 		train_data = tmp
 
@@ -103,10 +106,11 @@ def preprocessing_single(comp_RGB, alpha, BG, FG, batch_RGB_paths,i,image_size=3
 		tmp = train_pre[h_start_index:h_start_index+480, w_start_index:w_start_index+480, :]
 		if flip:
 			tmp = tmp[:,::-1,:]
-		tmp1 = np.zeros([image_size,image_size,11])
-		tmp1[:,:,:3] = misc.imresize(tmp[:,:,:3],[image_size,image_size,3]) - g_mean
-		tmp1[:,:,3] = misc.imresize(tmp[:,:,3],[image_size,image_size],interp = 'nearest') / 255.0
-		tmp1[:,:,4] = misc.imresize(tmp[:,:,4],[image_size,image_size]) / 255.0
+		tmp1 = np.zeros([image_size,image_size,11]).astype(np.float32)
+		raw_RGB = misc.imresize(tmp[:,:,:3],[image_size,image_size,3])
+		tmp1[:,:,:3] = raw_RGB - g_mean
+		tmp1[:,:,3] = misc.imresize(tmp[:,:,3],[image_size,image_size],interp = 'nearest') / 256.0
+		tmp1[:,:,4] = misc.imresize(tmp[:,:,4],[image_size,image_size]) / 256.0
 		tmp1[:,:,5:8] = misc.imresize(tmp[:,:,5:8],[image_size,image_size,3])
 		tmp1[:,:,8:] = misc.imresize(tmp[:,:,8:],[image_size,image_size,3])
 		train_data = tmp1
@@ -122,15 +126,16 @@ def preprocessing_single(comp_RGB, alpha, BG, FG, batch_RGB_paths,i,image_size=3
 		tmp = train_pre[h_start_index:h_start_index+620, w_start_index:w_start_index+620, :]
 		if flip:
 			tmp = tmp[:,::-1,:]
-		tmp1 = np.zeros([image_size,image_size,11])
-		tmp1[:,:,:3] = misc.imresize(tmp[:,:,:3],[image_size,image_size,3]) - g_mean
-		tmp1[:,:,3] = misc.imresize(tmp[:,:,3],[image_size,image_size],interp = 'nearest') / 255.0
-		tmp1[:,:,4] = misc.imresize(tmp[:,:,4],[image_size,image_size]) / 255.0
+		tmp1 = np.zeros([image_size,image_size,11]).astype(np.float32)
+		raw_RGB = misc.imresize(tmp[:,:,:3],[image_size,image_size,3])
+		tmp1[:,:,:3] = raw_RGB - g_mean
+		tmp1[:,:,3] = misc.imresize(tmp[:,:,3],[image_size,image_size],interp = 'nearest') / 256.0
+		tmp1[:,:,4] = misc.imresize(tmp[:,:,4],[image_size,image_size]) / 256.0
 		tmp1[:,:,5:8] = misc.imresize(tmp[:,:,5:8],[image_size,image_size,3])
 		tmp1[:,:,8:] = misc.imresize(tmp[:,:,8:],[image_size,image_size,3])
 		train_data = tmp1
 	train_data = train_data.astype(np.float32)
-	return train_data
+	return train_data,raw_RGB
 
 def load_test_data(test_alpha):
 	rgb_path = os.path.join(test_alpha,'rgb')
@@ -147,8 +152,9 @@ def load_test_data(test_alpha):
 		trimap = misc.imread(os.path.join(trimap_path,images[i]),'L')
 		alpha = misc.imread(os.path.join(alpha_path,images[i]),'L')
 		all_shape.append(trimap.shape)
-		rgb_batch.append(misc.imresize(rgb,[320,320,3]))
-		trimap = misc.imresize(trimap,[320,320],interp = 'nearest')
+		rgb_batch.append(misc.imresize(rgb,[320,320,3])-g_mean)
+		trimap = misc.imresize(trimap,[320,320],interp = 'nearest').astype(np.float32)/256.0
+
 		tri_batch.append(np.expand_dims(trimap,2))
 		alp_batch.append(np.expand_dims(alpha,2))
 	return np.array(rgb_batch),np.array(tri_batch),np.array(alp_batch),all_shape,images
