@@ -1,10 +1,10 @@
 '''
 deconv_v5.py
-change the architecture of loss. And make encoder model more complex. 
+change the architecture of loss. 
 '''
 import tensorflow as tf
 import numpy as np
-from matting import load_path,load_data,load_test_data
+from matting_numpy_v2 import load_path,load_data,load_test_data
 import os
 from scipy import misc
 
@@ -15,8 +15,8 @@ train_batch_size = 5
 max_epochs = 1000000
 
 #checkpoint file path
-#pretrained_model = './model/model.ckpt'
-pretrained_model = False
+pretrained_model = './model/model.ckpt'
+#pretrained_model = False
 test_dir = './alhpamatting'
 test_outdir = './test_predict'
 
@@ -371,8 +371,8 @@ coord = tf.train.Coordinator()
 summary_op = tf.summary.merge_all()
 summary_writer = tf.summary.FileWriter(log_dir, tf.get_default_graph())
 
-#gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction = 0.5)
-with tf.Session() as sess:
+gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction = 0.5)
+with tf.Session(config=tf.ConfigProto(gpu_options = gpu_options)) as sess:
     sess.run(tf.global_variables_initializer())
     tf.train.start_queue_runners(coord=coord,sess=sess)
     batch_num = 0
@@ -419,10 +419,18 @@ with tf.Session() as sess:
                 test_RGBs,test_trimaps,test_alphas,all_shape,image_paths = load_test_data(test_dir)
             
                 feed = {image_batch:test_RGBs,GT_trimap:test_trimaps}
-                test_out= sess.run(pred_mattes,feed_dict = feed)
+                test_out = sess.run(pred_mattes,feed_dict = feed)
+                vali_diff = []
                 for i in range(len(test_out)):
-                    misc.imsave(os.path.join(test_outdir,image_paths[i]),misc.imresize(test_out[i][:,:,0],all_shape[i]))
-                
+                    i_out = misc.imresize(test_out[i][:,:,0],all_shape[i])
+                    vali_diff.append(np.sum(np.abs(i_out/256.0-test_alphas[i])))
+                    misc.imsave(os.path.join(test_outdir,image_paths[i]),i_out)
+                vali_loss = np.mean(vali_diff)
+                print('validation loss is '+ str(vali_loss))
+                validation_summary = tf.Summary()
+                validation_summary.value.add(tag='validation_loss',simple_value = vali_loss)
+                summary_writer.add_summary(validation_summary,step)
+
             summary_writer.add_summary(summary_str,global_step = step)
             batch_num += 1
         epoch_num += 1
