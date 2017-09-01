@@ -1,6 +1,6 @@
 '''
-deconv_v4.py
-change the architecture of loss, in v4, only trimap unknown region will be predicted, and unknown region's loss is back propagated. 
+deconv_v5.py
+change the architecture of loss. And make encoder model more complex. 
 '''
 import tensorflow as tf
 import numpy as np
@@ -11,7 +11,7 @@ from scipy import misc
 
 
 image_size = 320
-train_batch_size = 10
+train_batch_size = 5
 max_epochs = 1000000
 
 #checkpoint file path
@@ -224,46 +224,110 @@ with tf.name_scope('conv6_1') as scope:
     biases = tf.Variable(tf.constant(0.0, shape=[512], dtype=tf.float32),
                          trainable=True, name='biases')
     out = tf.nn.bias_add(conv, biases)
-    conv6_1 = tf.nn.relu(out, name=scope)
+    conv6_1 = tf.nn.relu(out, name='conv6_1')
 
 training = True
 
 #deconv6
 with tf.variable_scope('deconv6') as scope:
-    outputs = tf.layers.conv2d_transpose(conv6_1, 512, [5, 5], strides=(2, 2), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
-    deconv6 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
+    kernel = tf.Variable(tf.truncated_normal([1, 1, 512, 512], dtype=tf.float32,
+                                             stddev=1e-1), name='weights')
+    conv = tf.nn.conv2d(conv6_1, kernel, [1, 1, 1, 1], padding='SAME')
+    biases = tf.Variable(tf.constant(0.0, shape=[512], dtype=tf.float32),
+                         trainable=True, name='biases')
+    out = tf.nn.bias_add(conv, biases)
+    deconv6 = tf.nn.relu(tf.layers.batch_normalization(out,training=training), name='deconv6')
 
-#deconv5
-with tf.variable_scope('deconv5') as scope:
-    outputs = tf.layers.conv2d_transpose(deconv6, 512, [5, 5], strides=(2, 2), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
-    deconv5 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
+#deconv5_1/unpooling
+with tf.variable_scope('deconv5_1') as scope:
+    outputs = tf.layers.conv2d_transpose(deconv6, 512, [3, 3], strides=(2, 2), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
+    deconv5_1 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
 
-#deconv4
-with tf.variable_scope('deconv4') as scope:
-    outputs = tf.layers.conv2d_transpose(deconv5, 256, [5, 5], strides=(2, 2), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
-    deconv4 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
+#deconv5_2
+with tf.variable_scope('deconv5_2') as scope:
+    kernel = tf.Variable(tf.truncated_normal([5, 5, 512, 512], dtype=tf.float32,
+                                             stddev=1e-1), name='weights')
+    conv = tf.nn.conv2d(deconv5_1, kernel, [1, 1, 1, 1], padding='SAME')
+    biases = tf.Variable(tf.constant(0.0, shape=[512], dtype=tf.float32),
+                         trainable=True, name='biases')
+    out = tf.nn.bias_add(conv, biases)
+    deconv5_2 = tf.nn.relu(tf.layers.batch_normalization(out,training=training), name='deconv5_2')
 
-#deconv3
-with tf.variable_scope('deconv3') as scope:
-    outputs = tf.layers.conv2d_transpose(deconv4, 128, [5, 5], strides=(2, 2), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
-    deconv3 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
+#deconv4_1/unpooling
+with tf.variable_scope('deconv4_1') as scope:
+    outputs = tf.layers.conv2d_transpose(deconv5_2, 512, [3, 3], strides=(2, 2), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
+    deconv4_1 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
 
-#deconv2
-with tf.variable_scope('deconv2') as scope:
-    outputs = tf.layers.conv2d_transpose(deconv3, 64, [5, 5], strides=(2, 2), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
-    deconv2 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
+#deconv4_2
+with tf.variable_scope('deconv4_2') as scope:
+    kernel = tf.Variable(tf.truncated_normal([5, 5, 512, 256], dtype=tf.float32,
+                                             stddev=1e-1), name='weights')
+    conv = tf.nn.conv2d(deconv4_1, kernel, [1, 1, 1, 1], padding='SAME')
+    biases = tf.Variable(tf.constant(0.0, shape=[256], dtype=tf.float32),
+                         trainable=True, name='biases')
+    out = tf.nn.bias_add(conv, biases)
+    deconv4_2 = tf.nn.relu(tf.layers.batch_normalization(out,training=training), name='deconv4_2')
 
-#deconv1
-with tf.variable_scope('deconv1') as scope:
-    outputs = tf.layers.conv2d_transpose(deconv2, 64, [5, 5], strides=(1, 1), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
-    deconv1 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
+#deconv3_1/unpooling
+with tf.variable_scope('deconv3_1') as scope:
+    outputs = tf.layers.conv2d_transpose(deconv4_2, 256, [3, 3], strides=(2, 2), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
+    deconv3_1 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
+
+#deconv3_2
+with tf.variable_scope('deconv3_2') as scope:
+    kernel = tf.Variable(tf.truncated_normal([5, 5, 256, 128], dtype=tf.float32,
+                                             stddev=1e-1), name='weights')
+    conv = tf.nn.conv2d(deconv3_1, kernel, [1, 1, 1, 1], padding='SAME')
+    biases = tf.Variable(tf.constant(0.0, shape=[128], dtype=tf.float32),
+                         trainable=True, name='biases')
+    out = tf.nn.bias_add(conv, biases)
+    deconv3_2 = tf.nn.relu(tf.layers.batch_normalization(out,training=training), name='deconv3_2')
+
+#deconv2_1/unpooling
+with tf.variable_scope('deconv2_1') as scope:
+    outputs = tf.layers.conv2d_transpose(deconv3_2, 128, [3, 3], strides=(2, 2), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
+    deconv2_1 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
+
+#deconv2_2
+with tf.variable_scope('deconv2_2') as scope:
+    kernel = tf.Variable(tf.truncated_normal([5, 5, 128, 64], dtype=tf.float32,
+                                             stddev=1e-1), name='weights')
+    conv = tf.nn.conv2d(deconv2_1, kernel, [1, 1, 1, 1], padding='SAME')
+    biases = tf.Variable(tf.constant(0.0, shape=[64], dtype=tf.float32),
+                         trainable=True, name='biases')
+    out = tf.nn.bias_add(conv, biases)
+    deconv2_2 = tf.nn.relu(tf.layers.batch_normalization(out,training=training), name='deconv2_2')
+
+#deconv1_1/unpooling
+with tf.variable_scope('deconv1_1') as scope:
+    outputs = tf.layers.conv2d_transpose(deconv2_2, 64, [3, 3], strides=(2, 2), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
+    deconv1_1 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
+
+#deconv1_2
+with tf.variable_scope('deconv1_2') as scope:
+    kernel = tf.Variable(tf.truncated_normal([5, 5, 64, 64], dtype=tf.float32,
+                                             stddev=1e-1), name='weights')
+    conv = tf.nn.conv2d(deconv1_1, kernel, [1, 1, 1, 1], padding='SAME')
+    biases = tf.Variable(tf.constant(0.0, shape=[64], dtype=tf.float32),
+                         trainable=True, name='biases')
+    out = tf.nn.bias_add(conv, biases)
+    deconv1_2 = tf.nn.relu(tf.layers.batch_normalization(out,training=training), name='deconv1_2')
 
 #pred_alpha_matte
 with tf.variable_scope('pred_alpha') as scope:
-    outputs = tf.layers.conv2d_transpose(deconv1, 1, [5, 5], strides=(1, 1), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
+    outputs = tf.layers.conv2d_transpose(deconv1_2, 1, [5, 5], strides=(1, 1), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
     pred_mattes = tf.nn.sigmoid(outputs)
 
-wl = tf.where(tf.equal(b_trimap,0.5), tf.fill([train_batch_size,image_size,image_size,1],1.) ,tf.fill([train_batch_size,image_size,image_size,1],0.))
+wl_alpha = tf.where(tf.equal(b_trimap,0.5), tf.fill([train_batch_size,image_size,image_size,1],1.) ,b_trimap)
+wl_alpha = tf.where(tf.less(b_trimap,0.5), tf.fill([train_batch_size,image_size,image_size,1],0.5) ,wl_alpha)
+wl_alpha = tf.where(tf.greater(b_trimap,0.5), tf.fill([train_batch_size,image_size,image_size,1],0.) ,wl_alpha)
+
+wl_RGB = tf.where(tf.equal(b_trimap,0.5), tf.fill([train_batch_size,image_size,image_size,1],0.) ,b_trimap)
+wl_RGB = tf.where(tf.greater(b_trimap,0.5), tf.fill([train_batch_size,image_size,image_size,1],1.) ,wl_RGB)
+wl_RGB = tf.where(tf.less(b_trimap,0.5), tf.fill([train_batch_size,image_size,image_size,1],0.5) ,wl_RGB)
+
+# tf.summary.image('wl_RGB',wl_RGB,max_outputs = 5)
+# tf.summary.image('wl_alpha',wl_alpha,max_outputs = 5)
 
 tf.summary.image('pred_mattes',pred_mattes,max_outputs = 5)
 
@@ -276,8 +340,8 @@ b_GTFG.set_shape([train_batch_size,image_size,image_size,3])
 raw_RGBs.set_shape([train_batch_size,image_size,image_size,3])
 
 
-pred_final =  tf.where(tf.equal(b_trimap,0.5), pred_mattes,b_trimap)
-l_matte = tf.unstack(pred_final)
+# pred_final =  tf.where(tf.equal(b_trimap,0.5), pred_mattes,b_trimap)
+l_matte = tf.unstack(pred_mattes)
 BG = tf.unstack(b_GTBG)
 FG = tf.unstack(b_GTFG)
 
@@ -288,8 +352,8 @@ pred_RGB = tf.stack(p_RGB)
 tf.summary.image('pred_RGB',pred_RGB,max_outputs = 5)
 c_diff = tf.sqrt(tf.square(pred_RGB/255.0 - raw_RGBs/255.0) + 1e-12)
 
-alpha_loss = tf.reduce_sum(alpha_diff * wl)/train_batch_size
-comp_loss = tf.reduce_sum(c_diff * wl)/(train_batch_size * 3)
+alpha_loss = tf.reduce_sum(alpha_diff * wl_alpha)/train_batch_size
+comp_loss = tf.reduce_sum(c_diff * wl_RGB)/(train_batch_size*3)
 
 tf.summary.scalar('alpha_loss',alpha_loss)
 tf.summary.scalar('comp_loss',comp_loss)
@@ -298,7 +362,7 @@ total_loss = (alpha_loss + comp_loss) * 0.5
 tf.summary.scalar('total_loss',total_loss)
 global_step = tf.Variable(0,trainable=False)
 
-tf.summary.image('pred_final',pred_final,max_outputs = 5)
+# tf.summary.image('pred_final',pred_final,max_outputs = 5)
 train_op = tf.train.AdamOptimizer(learning_rate = 1e-5).minimize(total_loss,global_step = global_step)
 
 saver = tf.train.Saver(tf.trainable_variables() , max_to_keep = 1)
@@ -347,7 +411,7 @@ with tf.Session() as sess:
             _,loss,summary_str,step= sess.run([train_op,total_loss,summary_op,global_step],feed_dict = feed)
             print('loss is %f' %loss)
 
-            if step%20 == 0:
+            if step%50 == 0:
                 print('saving model......')
                 saver.save(sess,'./model/model.ckpt',global_step = step, write_meta_graph = False)
 
@@ -355,7 +419,7 @@ with tf.Session() as sess:
                 test_RGBs,test_trimaps,test_alphas,all_shape,image_paths = load_test_data(test_dir)
             
                 feed = {image_batch:test_RGBs,GT_trimap:test_trimaps}
-                test_out= sess.run(pred_final,feed_dict = feed)
+                test_out= sess.run(pred_mattes,feed_dict = feed)
                 for i in range(len(test_out)):
                     misc.imsave(os.path.join(test_outdir,image_paths[i]),misc.imresize(test_out[i][:,:,0],all_shape[i]))
                 
