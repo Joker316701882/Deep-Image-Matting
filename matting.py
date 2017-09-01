@@ -150,7 +150,7 @@ def load_test_data(test_alpha):
 	for i in range(test_num):
 		rgb = misc.imread(os.path.join(rgb_path,images[i]))
 		trimap = misc.imread(os.path.join(trimap_path,images[i]),'L')
-		alpha = misc.imread(os.path.join(alpha_path,images[i]),'L')
+		alpha = misc.imread(os.path.join(alpha_path,images[i]),'L')/256.0
 		all_shape.append(trimap.shape)
 		rgb_batch.append(misc.imresize(rgb,[320,320,3])-g_mean)
 		trimap = misc.imresize(trimap,[320,320],interp = 'nearest').astype(np.float32)/256.0

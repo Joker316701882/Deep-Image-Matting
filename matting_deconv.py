@@ -4,7 +4,7 @@ change the architecture of loss.
 '''
 import tensorflow as tf
 import numpy as np
-from matting_numpy_v2 import load_path,load_data,load_test_data
+from matting import load_path,load_data,load_test_data
 import os
 from scipy import misc
 
