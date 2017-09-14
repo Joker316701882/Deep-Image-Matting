@@ -1,10 +1,10 @@
 '''
-deconv_v8.py
-set the input of trimap range from [0,255]
+unpool_v1.py
+replace deconv with unpooling
 '''
 import tensorflow as tf
 import numpy as np
-from matting_numpy_unpool import load_path,load_data,load_alphamatting_data,load_validation_data,unpool
+from matting import load_path,load_data,load_alphamatting_data,load_validation_data,unpool
 import os
 from scipy import misc
 
