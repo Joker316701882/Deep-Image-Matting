@@ -4,18 +4,18 @@ set the input of trimap range from [0,255]
 '''
 import tensorflow as tf
 import numpy as np
-from matting import load_path,load_data,load_alphamatting_data,load_validation_data
+from matting_numpy_unpool import load_path,load_data,load_alphamatting_data,load_validation_data,unpool
 import os
 from scipy import misc
 
 image_size = 320
-train_batch_size = 5
+train_batch_size = 1
 max_epochs = 1000000
 hard_mode = True
 
 #checkpoint file path
 pretrained_model = './model/model.ckpt'
-# pretrained_model = False
+#pretrained_model = False
 test_dir = './alhpamatting'
 test_outdir = './test_predict'
 validation_dir = '/data/gezheng/data-matting/new2/validation'
@@ -38,14 +38,15 @@ batchs_per_epoch = int(range_size/train_batch_size)
 index_queue = tf.train.range_input_producer(range_size, num_epochs=None,shuffle=True, seed=None, capacity=32)
 index_dequeue_op = index_queue.dequeue_many(train_batch_size, 'index_dequeue')
 
-image_batch = tf.placeholder(tf.float32, shape=(None,image_size,image_size,3))
-raw_RGBs = tf.placeholder(tf.float32, shape=(None,image_size,image_size,3))
-GT_matte_batch = tf.placeholder(tf.float32, shape = (None,image_size,image_size,1))
-GT_trimap = tf.placeholder(tf.float32, shape = (None,image_size,image_size,1))
-GTBG_batch = tf.placeholder(tf.float32, shape = (None,image_size,image_size,3))
-GTFG_batch = tf.placeholder(tf.float32, shape = (None,image_size,image_size,3))
+image_batch = tf.placeholder(tf.float32, shape=(1,image_size,image_size,3))
+raw_RGBs = tf.placeholder(tf.float32, shape=(1,image_size,image_size,3))
+GT_matte_batch = tf.placeholder(tf.float32, shape = (1,image_size,image_size,1))
+GT_trimap = tf.placeholder(tf.float32, shape = (1,image_size,image_size,1))
+GTBG_batch = tf.placeholder(tf.float32, shape = (1,image_size,image_size,3))
+GTFG_batch = tf.placeholder(tf.float32, shape = (1,image_size,image_size,3))
 
 en_parameters = []
+pool_parameters = []
 
 b_RGB = tf.identity(image_batch,name = 'b_RGB')
 b_trimap = tf.identity(GT_trimap,name = 'b_trimap')
@@ -82,8 +83,8 @@ with tf.name_scope('conv1_2') as scope:
     en_parameters += [kernel, biases]
 
 # pool1
-pool1 = tf.nn.max_pool(conv1_2,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME',name='pool1')
-
+pool1,arg1 = tf.nn.max_pool_with_argmax(conv1_2,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME',name='pool1')
+pool_parameters.append(arg1)
 # conv2_1
 with tf.name_scope('conv2_1') as scope:
     kernel = tf.Variable(tf.truncated_normal([3, 3, 64, 128], dtype=tf.float32,
@@ -107,8 +108,8 @@ with tf.name_scope('conv2_2') as scope:
     en_parameters += [kernel, biases]
 
 # pool2
-pool2 = tf.nn.max_pool(conv2_2,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME',name='pool2')
-
+pool2,arg2 = tf.nn.max_pool_with_argmax(conv2_2,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME',name='pool2')
+pool_parameters.append(arg2)
 # conv3_1
 with tf.name_scope('conv3_1') as scope:
     kernel = tf.Variable(tf.truncated_normal([3, 3, 128, 256], dtype=tf.float32,
@@ -143,8 +144,8 @@ with tf.name_scope('conv3_3') as scope:
     en_parameters += [kernel, biases]
 
 # pool3
-pool3 = tf.nn.max_pool(conv3_3,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME',name='pool3')
-
+pool3,arg3 = tf.nn.max_pool_with_argmax(conv3_3,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME',name='pool3')
+pool_parameters.append(arg3)
 # conv4_1
 with tf.name_scope('conv4_1') as scope:
     kernel = tf.Variable(tf.truncated_normal([3, 3, 256, 512], dtype=tf.float32,
@@ -179,8 +180,8 @@ with tf.name_scope('conv4_3') as scope:
     en_parameters += [kernel, biases]
 
 # pool4
-pool4 = tf.nn.max_pool(conv4_3,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME',name='pool4')
-
+pool4,arg4 = tf.nn.max_pool_with_argmax(conv4_3,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME',name='pool4')
+pool_parameters.append(arg4)
 # conv5_1
 with tf.name_scope('conv5_1') as scope:
     kernel = tf.Variable(tf.truncated_normal([3, 3, 512, 512], dtype=tf.float32,
@@ -215,8 +216,8 @@ with tf.name_scope('conv5_3') as scope:
     en_parameters += [kernel, biases]
 
 # pool5
-pool5 = tf.nn.max_pool(conv5_3,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME',name='pool4')
-
+pool5,arg5 = tf.nn.max_pool_with_argmax(conv5_3,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME',name='pool4')
+pool_parameters.append(arg5)
 # conv6_1
 with tf.name_scope('conv6_1') as scope:
     kernel = tf.Variable(tf.truncated_normal([3, 3, 512, 512], dtype=tf.float32,
@@ -238,11 +239,9 @@ with tf.variable_scope('deconv6') as scope:
                          trainable=True, name='biases')
     out = tf.nn.bias_add(conv, biases)
     deconv6 = tf.nn.relu(tf.layers.batch_normalization(out,training=training), name='deconv6')
-
-#deconv5_1/unpooling
-with tf.variable_scope('deconv5_1') as scope:
-    outputs = tf.layers.conv2d_transpose(deconv6, 512, [3, 3], strides=(2, 2), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
-    deconv5_1 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
+    
+deconv5_1 = unpool(deconv6,pool_parameters[-1])
+    
 #deconv5_2
 with tf.variable_scope('deconv5_2') as scope:
     kernel = tf.Variable(tf.truncated_normal([5, 5, 512, 512], dtype=tf.float32,
@@ -253,10 +252,7 @@ with tf.variable_scope('deconv5_2') as scope:
     out = tf.nn.bias_add(conv, biases)
     deconv5_2 = tf.nn.relu(tf.layers.batch_normalization(out,training=training), name='deconv5_2')
 
-#deconv4_1/unpooling
-with tf.variable_scope('deconv4_1') as scope:
-    outputs = tf.layers.conv2d_transpose(deconv5_2, 512, [3, 3], strides=(2, 2), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
-    deconv4_1 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
+deconv4_1 = unpool(deconv5_2,pool_parameters[-2])
 
 #deconv4_2
 with tf.variable_scope('deconv4_2') as scope:
@@ -268,10 +264,7 @@ with tf.variable_scope('deconv4_2') as scope:
     out = tf.nn.bias_add(conv, biases)
     deconv4_2 = tf.nn.relu(tf.layers.batch_normalization(out,training=training), name='deconv4_2')
 
-#deconv3_1/unpooling
-with tf.variable_scope('deconv3_1') as scope:
-    outputs = tf.layers.conv2d_transpose(deconv4_2, 256, [3, 3], strides=(2, 2), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer()) 
-    deconv3_1 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
+deconv3_1 = unpool(deconv4_2,pool_parameters[-3])
 
 #deconv3_2
 with tf.variable_scope('deconv3_2') as scope:
@@ -283,10 +276,7 @@ with tf.variable_scope('deconv3_2') as scope:
     out = tf.nn.bias_add(conv, biases)
     deconv3_2 = tf.nn.relu(tf.layers.batch_normalization(out,training=training), name='deconv3_2')
 
-#deconv2_1/unpooling
-with tf.variable_scope('deconv2_1') as scope:
-    outputs = tf.layers.conv2d_transpose(deconv3_2, 128, [3, 3], strides=(2, 2), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
-    deconv2_1 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
+deconv2_1 = unpool(deconv3_2,pool_parameters[-4])
 
 #deconv2_2
 with tf.variable_scope('deconv2_2') as scope:
@@ -298,10 +288,7 @@ with tf.variable_scope('deconv2_2') as scope:
     out = tf.nn.bias_add(conv, biases)
     deconv2_2 = tf.nn.relu(tf.layers.batch_normalization(out,training=training), name='deconv2_2')
 
-#deconv1_1/unpooling
-with tf.variable_scope('deconv1_1') as scope:
-    outputs = tf.layers.conv2d_transpose(deconv2_2, 64, [3, 3], strides=(2, 2), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
-    deconv1_1 = tf.nn.relu(tf.layers.batch_normalization(outputs,training=training))
+deconv1_1 = unpool(deconv2_2,pool_parameters[-5])
 
 #deconv1_2
 with tf.variable_scope('deconv1_2') as scope:
@@ -317,7 +304,7 @@ with tf.variable_scope('pred_alpha') as scope:
     outputs = tf.layers.conv2d_transpose(deconv1_2, 1, [5, 5], strides=(1, 1), padding='SAME', kernel_initializer=tf.contrib.layers.xavier_initializer())
     pred_mattes = tf.nn.sigmoid(outputs)
 
-wl = tf.where(tf.equal(b_trimap,128),tf.fill([train_batch_size,image_size,image_size,1],1.),tf.fill([train_batch_size,image_size,image_size,1],0.))
+wl = tf.where(tf.equal(b_trimap,128), tf.fill([train_batch_size,image_size,image_size,1],1.), tf.fill([train_batch_size,image_size,image_size,1], 0.5))
 
 tf.summary.image('pred_mattes',pred_mattes,max_outputs = 5)
 alpha_diff = tf.sqrt(tf.square(pred_mattes - GT_matte_batch)+ 1e-12)
@@ -329,10 +316,10 @@ b_GTFG.set_shape([train_batch_size,image_size,image_size,3])
 raw_RGBs.set_shape([train_batch_size,image_size,image_size,3])
 b_GTmatte.set_shape([train_batch_size,image_size,image_size,1])
 
-pred_final =  tf.where(tf.equal(b_trimap,128), pred_mattes,b_trimap/255.0)
+pred_final =  tf.where(tf.equal(b_trimap,128), pred_mattes, b_trimap/255.0)
 tf.summary.image('pred_final',pred_final,max_outputs = 5)
 
-l_matte = tf.unstack(pred_final)
+l_matte = tf.unstack(pred_mattes)
 BG = tf.unstack(b_GTBG)
 FG = tf.unstack(b_GTFG)
 
@@ -340,11 +327,13 @@ for i in range(train_batch_size):
     p_RGB.append(l_matte[i] * FG[i] + (tf.constant(1.) - l_matte[i]) * BG[i])
 pred_RGB = tf.stack(p_RGB)
 
-tf.summary.image('pred_RGB',pred_RGB,max_outputs = 5)
-c_diff = tf.sqrt(tf.square(pred_RGB/255.0 - raw_RGBs/255.0) + 1e-12)
+tf.summary.image('pred_RGB', pred_RGB, max_outputs = 5)
+#c_diff = tf.sqrt(tf.square(pred_RGB/255.0 - raw_RGBs/255.0) + 1e-12)
+# changed 201709
+c_diff = tf.sqrt(tf.square(pred_RGB - raw_RGBs) + 1e-12) / 255.0
 
-alpha_loss = tf.reduce_sum(alpha_diff * wl)/train_batch_size
-comp_loss = tf.reduce_sum(c_diff * wl)/train_batch_size
+alpha_loss = tf.reduce_sum(alpha_diff * wl)/(tf.reduce_sum(wl))
+comp_loss = tf.reduce_sum(c_diff * wl)/(tf.reduce_sum(wl))
 
 # tf.summary.image('alpha_diff',alpha_diff * wl_alpha,max_outputs = 5)
 # tf.summary.image('c_diff',c_diff * wl_RGB,max_outputs = 5)
@@ -365,7 +354,7 @@ coord = tf.train.Coordinator()
 summary_op = tf.summary.merge_all()
 summary_writer = tf.summary.FileWriter(log_dir, tf.get_default_graph())
 
-gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction = 0.7)
+gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction = 0.45)
 with tf.Session(config=tf.ConfigProto(gpu_options = gpu_options)) as sess:
     sess.run(tf.global_variables_initializer())
     tf.train.start_queue_runners(coord=coord,sess=sess)
@@ -403,21 +392,28 @@ with tf.Session(config=tf.ConfigProto(gpu_options = gpu_options)) as sess:
 
             _,loss,summary_str,step= sess.run([train_op,total_loss,summary_op,global_step],feed_dict = feed)
             print('loss is %f' %loss)
-
-            if step%20 == 0:
+            
+            if step%200 == 0:
                 print('saving model......')
                 saver.save(sess,'./model/model.ckpt',global_step = step, write_meta_graph = False)
 
                 print('test on validation data...')
-                test_RGBs,test_trimaps,test_alphas,all_shape,image_paths = load_validation_data(validation_dir)
-            
-                feed = {image_batch:test_RGBs,GT_trimap:test_trimaps}
-                test_out = sess.run(pred_final,feed_dict = feed)
                 vali_diff = []
-                for i in range(len(test_out)):
-                    i_out = misc.imresize(test_out[i][:,:,0],all_shape[i])
-                    vali_diff.append(np.sum(np.abs(i_out/256.0-test_alphas[i])))
-                    misc.imsave(os.path.join(test_outdir,image_paths[i]),i_out)
+                test_RGBs,test_trimaps,test_alphas,all_shape,image_paths = load_validation_data(validation_dir)
+                for i in range(len(test_RGBs)):
+                    test_RGB = np.expand_dims(test_RGBs[i],0)
+                    test_trimap = np.expand_dims(test_trimaps[i],0)
+                    test_alpha = test_alphas[i]
+                    shape_i = all_shape[i]
+                    image_path = image_paths[i]
+                    
+                    feed = {image_batch:test_RGB,GT_trimap:test_trimap}
+                    test_out = sess.run(pred_mattes,feed_dict = feed)
+                    
+                    i_out = misc.imresize(test_out[0,:,:,0],shape_i)
+                    vali_diff.append(np.sum(np.abs(i_out/255.0-test_alpha))/(shape_i[0]*shape_i[1]))
+                    misc.imsave(os.path.join(test_outdir,image_path),i_out)
+                
                 vali_loss = np.mean(vali_diff)
                 print('validation loss is '+ str(vali_loss))
                 validation_summary = tf.Summary()
