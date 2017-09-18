@@ -16,3 +16,6 @@ Latest version of code has following changes:
 2. Replace deconvolution with unpooling. Because in the experiment, it is shown that deconvolution is always hard to learn detailed information (like hair). And because of using unpooling, batch_size is also changed from 5 to 1 ( The code is not decent now, just can work).    
 3. Another thing need to mentioned here is that when we training on single complex sample like bike, even with deconvolution (not unpooling), the network can overfitting. But deconvolution can't converge on whole dataset. (Maybe I didn't training enough time : lr = 1e-5 with 5 days training, can't converge). Discussion about 'whether deconvolution can replace unpooling' is welcomed!
 4. Add hard mode to allow training on tough samples
+
+*My Chinese blog about the implementation of this paper*
+http://blog.leanote.com/post/calebge/Deep-Image-Matting%E5%A4%8D%E7%8E%B0%E8%BF%87%E7%A8%8B%E6%80%BB%E7%BB%93
