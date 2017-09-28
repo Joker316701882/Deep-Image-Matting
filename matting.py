@@ -130,12 +130,12 @@ def preprocessing_single(alpha, BG, eps,name,image_size=320):
             tmp = tmp[:,::-1,:]
         tmp1 = np.zeros([image_size,image_size,8]).astype(np.float32)
         tmp1[:,:,0] = misc.imresize(tmp[:,:,0].astype(np.uint8),[image_size,image_size],interp = 'nearest',mode='L').astype(np.float32)
-        tmp1[:,:,1] = misc.imresize(tmp[:,:,1],[image_size,image_size]) / 255.0
-        tmp1[:,:,2:5] = misc.imresize(tmp[:,:,2:5],[image_size,image_size,3])
-        tmp1[:,:,5:] = misc.imresize(tmp[:,:,5:],[image_size,image_size,3])
-        tmp1[:,:,5:] = np.expand_dims(tmp1[:,:,1],2)  * tmp1[:,:,5:]  # here replace eps with FG		
+        tmp1[:,:,1] = misc.imresize(tmp[:,:,1].astype(np.uint8),[image_size,image_size]).astype(np.float32) / 255.0
+        tmp1[:,:,2:5] = misc.imresize(tmp[:,:,2:5].astype(np.uint8),[image_size,image_size,3]).astype(np.float32)
+        tmp1[:,:,5:] = misc.imresize(tmp[:,:,5:].astype(np.uint8),[image_size,image_size,3]).astype(np.float32)
+        tmp1[:,:,5:] = np.expand_dims(tmp1[:,:,1],2)  * tmp1[:,:,5:]  # here replace eps with FG        
         raw_RGB = np.expand_dims(tmp1[:,:,1],2)  * tmp1[:,:,5:] + np.expand_dims((1. - tmp1[:,:,1]),2) * tmp1[:,:,2:5]
-        reduced_RGB = raw_RGB - g_mean
+        reduced_RGB = raw_RGB - g_mean      
         tmp1 = np.concatenate([reduced_RGB,tmp1],2)
         train_data = tmp1
 
@@ -152,12 +152,12 @@ def preprocessing_single(alpha, BG, eps,name,image_size=320):
             tmp = tmp[:,::-1,:]
         tmp1 = np.zeros([image_size,image_size,8]).astype(np.float32)
         tmp1[:,:,0] = misc.imresize(tmp[:,:,0].astype(np.uint8),[image_size,image_size],interp = 'nearest',mode='L').astype(np.float32)
-        tmp1[:,:,1] = misc.imresize(tmp[:,:,1],[image_size,image_size]) / 255.0
-        tmp1[:,:,2:5] = misc.imresize(tmp[:,:,2:5],[image_size,image_size,3])
-        tmp1[:,:,5:] = misc.imresize(tmp[:,:,5:],[image_size,image_size,3])
-        tmp1[:,:,5:] = np.expand_dims(tmp1[:,:,1],2)  * tmp1[:,:,5:]  # here replace eps with FG
+        tmp1[:,:,1] = misc.imresize(tmp[:,:,1].astype(np.uint8),[image_size,image_size]).astype(np.float32) / 255.0
+        tmp1[:,:,2:5] = misc.imresize(tmp[:,:,2:5].astype(np.uint8),[image_size,image_size,3]).astype(np.float32)
+        tmp1[:,:,5:] = misc.imresize(tmp[:,:,5:].astype(np.uint8),[image_size,image_size,3]).astype(np.float32)
+        tmp1[:,:,5:] = np.expand_dims(tmp1[:,:,1],2)  * tmp1[:,:,5:]  # here replace eps with FG        
         raw_RGB = np.expand_dims(tmp1[:,:,1],2)  * tmp1[:,:,5:] + np.expand_dims((1. - tmp1[:,:,1]),2) * tmp1[:,:,2:5]
-        reduced_RGB = raw_RGB - g_mean		
+        reduced_RGB = raw_RGB - g_mean      
         tmp1 = np.concatenate([reduced_RGB,tmp1],2)
         train_data = tmp1
     train_data = train_data.astype(np.float32)
