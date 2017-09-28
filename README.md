@@ -18,4 +18,11 @@ Latest version of code has following changes:
 4. Add hard mode to allow training on tough samples
 
 *My Chinese blog about the implementation of this paper*
-http://blog.leanote.com/post/calebge/Deep-Image-Matting%E5%A4%8D%E7%8E%B0%E8%BF%87%E7%A8%8B%E6%80%BB%E7%BB%93
+http://blog.leanote.com/post/calebge/Deep-Image-Matting%E5%A4%8D%E7%8E%B0%E8%BF%87%E7%A8%8B%E6%80%BB%E7%BB%93  
+
+<h2>Usage</h2>
+simply run:
+python test.py --alpha --rgb
+sample:
+python test.py --alpha=./test_data/alpha/1.png --rgb=./test_data/rgb/1.png
+
