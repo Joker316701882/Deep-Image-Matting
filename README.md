@@ -26,3 +26,10 @@ python test.py --alpha --rgb<br />
 sample:<br />
 python test.py --alpha=./test_data/alpha/1.png --rgb=./test_data/rgb/1.png<br />
 
+<h2>Pretrained Model</h2>
+Currently pretrained model is not published yet, I'm working on it now.
+
+<h2>Salience Object Detection</h2>
+Here is my implementation about paper "Deeply Supervised Salient Object Detection with Short Connections" in CVPR2017. Source code won't be pubulished because I did some modification in network structure, but trained model and inference code are available. Now it's only version 1, try it if u are interested! <br />
+https://github.com/Joker316701882/Salience-Object-Detection
+
