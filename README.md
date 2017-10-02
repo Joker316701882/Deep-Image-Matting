@@ -18,7 +18,7 @@ Latest version of code has following changes:
 4. Add hard mode to allow training on tough samples
 
 *My Chinese blog about the implementation of this paper*
-http://blog.leanote.com/post/calebge/Deep-Image-Matting%E5%A4%8D%E7%8E%B0%E8%BF%87%E7%A8%8B%E6%80%BB%E7%BB%93  
+http://blog.leanote.com/post/calebge/Deep-Image-Matting%E5%A4%8D%E7%8E%B0%E8%BF%87%E7%A8%8B%E6%80%BB%E7%BB%93  <br />
 
 <h2>Usage</h2>
 simply run:<br />
@@ -27,7 +27,9 @@ sample:<br />
 python test.py --alpha=./test_data/alpha/1.png --rgb=./test_data/rgb/1.png<br />
 
 <h2>Pretrained Model</h2>
-Currently pretrained model is not published yet, I'm working on it now.
+Can be found here:<br />
+https://drive.google.com/open?id=0B6l9O8aWij8fSnZBa2o4OUpsb1k <br />
+notice that you have to create a folder './model' under root and then put those pretrained model in there.<br />
 
 <h2>Salience Object Detection</h2>
 Here is my implementation about paper "Deeply Supervised Salient Object Detection with Short Connections" in CVPR2017. Source code won't be pubulished because I did some modification in network structure, but trained model and inference code are available. Now it's only version 1, try it if u are interested! <br />
