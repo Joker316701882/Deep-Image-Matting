@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 import os
 from scipy import misc
-from matting_numpy_unpool import generate_trimap
+from matting import generate_trimap
 import argparse
 import sys
 
@@ -28,7 +28,7 @@ def main(args):
 		feed_dict = {image_batch:rgb,GT_trimap:trimap}
 		pred_alpha = sess.run(pred_mattes,feed_dict = feed_dict)
 		final_alpha = misc.imresize(np.squeeze(pred_alpha),origin_shape)
-		misc.imshow(final_alpha)
+		# misc.imshow(final_alpha)
 		misc.imsave('./alpha.png',final_alpha)
 
 def parse_arguments(argv):
@@ -38,8 +38,6 @@ def parse_arguments(argv):
 		help='input alpha')
 	parser.add_argument('--rgb', type=str,
 		help='input rgb')
-	parser.add_argument('--trimap_dilation', type=int,
-		help='the kernel size that used to generate trimap from alpha, 20~40 are suggested',default = 30)
 	parser.add_argument('--gpu_fraction', type=float,
 		help='how much gpu is needed, usually 4G is enough',default = 0.4)
 	return parser.parse_args(argv)
