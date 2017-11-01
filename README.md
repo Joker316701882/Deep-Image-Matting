@@ -19,7 +19,8 @@ Latest version of code has following changes:
 
 **2017-11-01:**
 1. Fresh version of unpooling added. Now it can deal with wariable batch size.
-2. Trimap argument added to the test script, so now you can test pretrained model on your own images, even if you don't have alpha-mask. Just paint rough trimap manually in any graphics editor.
+2. 0-dimension of placeholders were set to None. This allows setting a different batch size for train and test runs.
+3. Trimap argument added to the test script, so now you can test pretrained model on your own images, even if you don't have alpha-mask. Just paint rough trimap manually in any graphics editor.
 
 *My Chinese blog about the implementation of this paper*
 http://blog.leanote.com/post/calebge/Deep-Image-Matting%E5%A4%8D%E7%8E%B0%E8%BF%87%E7%A8%8B%E6%80%BB%E7%BB%93  <br />
