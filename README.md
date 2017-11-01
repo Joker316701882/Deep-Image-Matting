@@ -18,7 +18,7 @@ Latest version of code has following changes:
 4. Add hard mode to allow training on tough samples
 
 **2017-11-01:**
-1. Fresh version of unpooling added. Now it can deal with wariable batch size.
+1. Fresh version of unpooling added. Now it can deal with variable batch size.
 2. 0-dimension of placeholders were set to None. This allows setting a different batch size for train and test runs.
 3. Trimap argument added to the test script, so now you can test pretrained model on your own images, even if you don't have alpha-mask. Just paint rough trimap manually in any graphics editor.
 
