@@ -24,7 +24,7 @@ def main(args):
 		else:
 			alpha = misc.imread(args.alpha,'L')
 			trimap = generate_trimap(np.expand_dims(np.copy(alpha),2),np.expand_dims(alpha,2))[:,:,0]
-		origin_shape = alpha.shape
+		origin_shape = trimap.shape
 		rgb = np.expand_dims(misc.imresize(rgb.astype(np.uint8),[320,320,3]).astype(np.float32)-g_mean,0)
 		trimap = np.expand_dims(np.expand_dims(misc.imresize(trimap.astype(np.uint8),[320,320],interp = 'nearest').astype(np.float32),2),0)
 
