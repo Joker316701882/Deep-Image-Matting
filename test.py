@@ -19,9 +19,12 @@ def main(args):
 		pred_mattes = tf.get_collection('pred_mattes')[0]
 
 		rgb = misc.imread(args.rgb)
-		alpha = misc.imread(args.alpha,'L')
-		trimap = generate_trimap(np.expand_dims(np.copy(alpha),2),np.expand_dims(alpha,2))[:,:,0]
-		origin_shape = alpha.shape
+		if args.trimap is not None:
+			trimap = misc.imread(args.trimap,'L')
+		else:
+			alpha = misc.imread(args.alpha,'L')
+			trimap = generate_trimap(np.expand_dims(np.copy(alpha),2),np.expand_dims(alpha,2))[:,:,0]
+		origin_shape = trimap.shape
 		rgb = np.expand_dims(misc.imresize(rgb.astype(np.uint8),[320,320,3]).astype(np.float32)-g_mean,0)
 		trimap = np.expand_dims(np.expand_dims(misc.imresize(trimap.astype(np.uint8),[320,320],interp = 'nearest').astype(np.float32),2),0)
 
@@ -38,11 +41,13 @@ def parse_arguments(argv):
 		help='input alpha')
 	parser.add_argument('--rgb', type=str,
 		help='input rgb')
+	parser.add_argument('--trimap', type=str,
+		help='input trimap')
 	parser.add_argument('--gpu_fraction', type=float,
 		help='how much gpu is needed, usually 4G is enough',default = 0.4)
 	return parser.parse_args(argv)
 
 
 if __name__ == '__main__':
-    main(parse_arguments(sys.argv[1:]))
+	main(parse_arguments(sys.argv[1:]))
 

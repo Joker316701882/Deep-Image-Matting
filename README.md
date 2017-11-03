@@ -17,6 +17,11 @@ Latest version of code has following changes:
 3. Another thing need to mentioned here is that when we training on single complex sample like bike, even with deconvolution (not unpooling), the network can overfitting. But deconvolution can't converge on whole dataset. (Maybe I didn't training enough time : lr = 1e-5 with 5 days training, can't converge). Discussion about 'whether deconvolution can replace unpooling' is welcomed!
 4. Add hard mode to allow training on tough samples
 
+**2017-11-01:**
+1. Fresh version of unpooling added. Now it can deal with variable batch size.
+2. 0-dimension of placeholders were set to None. This allows setting a different batch size for train and test runs.
+3. Trimap argument added to the test script, so now you can test pretrained model on your own images, even if you don't have alpha-mask. Just paint rough trimap manually in any graphics editor.
+
 *My Chinese blog about the implementation of this paper*
 http://blog.leanote.com/post/calebge/Deep-Image-Matting%E5%A4%8D%E7%8E%B0%E8%BF%87%E7%A8%8B%E6%80%BB%E7%BB%93  <br />
 
@@ -25,6 +30,8 @@ simply run:<br />
 python test.py --alpha --rgb<br /> 
 sample:<br />
 python test.py --alpha=./test_data/alpha/1.png --rgb=./test_data/RGB/1.png<br />
+or you can use any other trimap you already have, instead of generating it from alpha:<br />
+python test.py --trimap --rgb<br />
 
 <h2>Pretrained Model</h2>
 Can be found here:<br />

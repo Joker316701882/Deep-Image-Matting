@@ -35,12 +35,12 @@ batchs_per_epoch = int(range_size/train_batch_size)
 index_queue = tf.train.range_input_producer(range_size, num_epochs=None,shuffle=True, seed=None, capacity=32)
 index_dequeue_op = index_queue.dequeue_many(train_batch_size, 'index_dequeue')
 
-image_batch = tf.placeholder(tf.float32, shape=(train_batch_size,image_size,image_size,3))
-raw_RGBs = tf.placeholder(tf.float32, shape=(train_batch_size,image_size,image_size,3))
-GT_matte_batch = tf.placeholder(tf.float32, shape = (train_batch_size,image_size,image_size,1))
-GT_trimap = tf.placeholder(tf.float32, shape = (train_batch_size,image_size,image_size,1))
-GTBG_batch = tf.placeholder(tf.float32, shape = (train_batch_size,image_size,image_size,3))
-GTFG_batch = tf.placeholder(tf.float32, shape = (train_batch_size,image_size,image_size,3))
+image_batch = tf.placeholder(tf.float32, shape=(None,image_size,image_size,3))
+raw_RGBs = tf.placeholder(tf.float32, shape=(None,image_size,image_size,3))
+GT_matte_batch = tf.placeholder(tf.float32, shape = (None,image_size,image_size,1))
+GT_trimap = tf.placeholder(tf.float32, shape = (None,image_size,image_size,1))
+GTBG_batch = tf.placeholder(tf.float32, shape = (None,image_size,image_size,3))
+GTFG_batch = tf.placeholder(tf.float32, shape = (None,image_size,image_size,3))
 
 
 tf.add_to_collection('image_batch',image_batch)
