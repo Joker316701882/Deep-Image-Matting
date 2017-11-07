@@ -24,7 +24,7 @@ http://blog.leanote.com/post/calebge/Deep-Image-Matting%E5%A4%8D%E7%8E%B0%E8%BF%
 simply run:<br />
 python test.py --alpha --rgb<br /> 
 sample:<br />
-python test.py --alpha=./test_data/alpha/1.png --rgb=./test_data/rgb/1.png<br />
+python test.py --alpha=./test_data/alpha/1.png --rgb=./test_data/RGB/1.png<br />
 
 <h2>Pretrained Model</h2>
 Can be found here:<br />
