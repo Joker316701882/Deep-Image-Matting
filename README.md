@@ -31,6 +31,11 @@ Can be found here:<br />
 https://drive.google.com/open?id=0B6l9O8aWij8fSnZBa2o4OUpsb1k <br />
 notice that you have to create a folder './model' under root and then put those pretrained model in there.<br />
 
+<h2>Important notification:</h2>
+1. The pretrained model is trained on private dataset, which has large difference from authors data, so it performs a little struggling on author's data. You can test the model by feeding test_data.<br />
+2. 'fc6' is transformed into convolution operation by tricks proposed in FCN paper. This paper also follows this way. But in this code, convolutionarized 'fc6' is replaced by plain convolution whose weights and biases are initialilzed randomly.<br />
+3. Even test on our own data, this model still can't reach the performance mentioned in paper.<br />
+
 <h2>Salience Object Detection</h2>
 Here is my implementation about paper "Deeply Supervised Salient Object Detection with Short Connections" in CVPR2017. Source code won't be pubulished because I did some modification in network structure, but trained model and inference code are available. Now it's only version 1, try it if u are interested! <br />
 https://github.com/Joker316701882/Salience-Object-Detection
