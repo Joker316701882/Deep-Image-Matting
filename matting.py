@@ -91,8 +91,8 @@ def load_data(batch_alpha_paths,batch_eps_paths,batch_BG_paths):
 def generate_trimap(trimap,alpha):
 
 	k_size = random.choice(trimap_kernel)
-	# trimap[np.where((ndimage.grey_dilation(alpha[:,:,0],size=(k_size,k_size)) - ndimage.grey_erosion(alpha[:,:,0],size=(k_size,k_size)))!=0)] = 128
-	trimap[np.where((ndimage.grey_dilation(alpha[:,:,0],size=(k_size,k_size)) - alpha[:,:,0]!=0))] = 128
+	trimap[np.where((ndimage.grey_dilation(alpha[:,:,0],size=(k_size,k_size)) - ndimage.grey_erosion(alpha[:,:,0],size=(k_size,k_size)))!=0)] = 128
+	#trimap[np.where((ndimage.grey_dilation(alpha[:,:,0],size=(k_size,k_size)) - alpha[:,:,0]!=0))] = 128
 	return trimap
 
 def preprocessing_single(alpha, BG, eps,name,image_size=320):
