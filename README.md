@@ -17,6 +17,14 @@ Latest version of code has following changes:
 3. Another thing need to mentioned here is that when we training on single complex sample like bike, even with deconvolution (not unpooling), the network can overfitting. But deconvolution can't converge on whole dataset. (Maybe I didn't training enough time : lr = 1e-5 with 5 days training, can't converge). Discussion about 'whether deconvolution can replace unpooling' is welcomed!
 4. Add hard mode to allow training on tough samples
 
+**2018-2-19:** 
+I was working on other projects recently, so long time no maintaining this repo. In issues, I noticed some great comments may give the hint that why previous work can't reach author's performance! Here is some idea you can apply to improve this work:
+
+1. Preparing training set using author's code (I used to work with scipy.misc which has too many weird auto-settings, it hurts the performance! If you want to use scipy.misc, make sure you understand this lib very well. Or: try PIL or opencv, there won't be too much troublesome things).
+2. Generate trimap using  **random dilation**  and  **random erosion**  both! Previous code used random dilation only which is a fatal mistake!
+3. Testing time ,use original size (or resize it to the closest number which can be divided by 32).
+I don't have free GPU to keep working on this, so above suggestions are not verified to be useful. If it helps, let me know : )
+
 *My Chinese blog about the implementation of this paper*
 http://blog.leanote.com/post/calebge/Deep-Image-Matting%E5%A4%8D%E7%8E%B0%E8%BF%87%E7%A8%8B%E6%80%BB%E7%BB%93  <br />
 
@@ -35,14 +43,6 @@ notice that you have to create a folder './model' under root and then put those 
 1. The pretrained model is trained on private dataset, which has large difference from authors data, so it performs a little struggling on author's data. You can test the model by feeding test_data.<br />
 2. 'fc6' is transformed into convolution operation by tricks proposed in FCN paper. This paper also follows this way. But in this code, convolutionarized 'fc6' is replaced by plain convolution whose weights and biases are initialilzed randomly.<br />
 3. Even test on our own data, this model still can't reach the performance mentioned in paper.<br />
-
-<h2>Update:</h2>
-**2018-2-19:**  I was working on other projects recently, so long time no maintaining this repo. In issues, I noticed some great comments may give the hint that why previous work can't reach author's performance! Here is some idea you can apply to improve this work:
-
-1. Preparing training set using author's code (I used to work with scipy.misc which has too many weird auto-settings, it hurts the performance! If you want to use scipy.misc, make sure you understand this lib very well. Or: try PIL or opencv, there won't be too much troublesome things).
-2. Generate trimap using  **random dilation**  and  **random erosion**  both! Previous code used random dilation only which is a fatal mistake!
-3. Testing time ,use original size (or resize it to the closest number which can be divided by 32).
-I don't have free GPU to keep working on this, so above suggestions are not verified to be useful. If it helps, let me know : )
 
 <h2>Salience Object Detection</h2>
 Here is my implementation about paper "Deeply Supervised Salient Object Detection with Short Connections" in CVPR2017. Source code won't be pubulished because I did some modification in network structure, but trained model and inference code are available. Now it's only version 1, try it if u are interested! <br />
