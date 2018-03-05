@@ -222,7 +222,7 @@ with tf.name_scope('conv5_3') as scope:
     en_parameters += [kernel, biases]
 
 # pool5
-pool5,arg5 = tf.nn.max_pool_with_argmax(conv5_3,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME',name='pool4')
+pool5,arg5 = tf.nn.max_pool_with_argmax(conv5_3,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME',name='pool5')
 pool_parameters.append(arg5)
 # conv6_1
 with tf.name_scope('conv6_1') as scope:
