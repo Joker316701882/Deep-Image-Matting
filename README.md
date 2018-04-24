@@ -25,6 +25,9 @@ I was working on other projects recently, so long time no maintaining this repo.
 3. Testing time ,use original size (or resize it to the closest number which can be divided by 32).
 I don't have free GPU to keep working on this, so above suggestions are not verified to be useful. If it helps, let me know : )
 
+**2018-4-24:** 
+Because I changed implementation of 'unpool' so the test code can't work now. I have no plan to modify this repo but probably restart a new repo for Image Matting with brand new algorithm in near future.
+
 *My Chinese blog about the implementation of this paper*
 http://blog.leanote.com/post/calebge/Deep-Image-Matting%E5%A4%8D%E7%8E%B0%E8%BF%87%E7%A8%8B%E6%80%BB%E7%BB%93  <br />
 
