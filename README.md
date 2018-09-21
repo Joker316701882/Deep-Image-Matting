@@ -38,9 +38,7 @@ sample:<br />
 python test.py --alpha=./test_data/alpha/1.png --rgb=./test_data/RGB/1.png<br />
 
 <h2>Pretrained Model</h2>
-Can be found here:<br />
-https://drive.google.com/open?id=0B6l9O8aWij8fSnZBa2o4OUpsb1k <br />
-notice that you have to create a folder './model' under root and then put those pretrained model in there.<br />
+Because I mid-delete the pretrained model on google drive, and that is the only one copy, so there is no pretrained model any more.
 
 <h2>Important notification:</h2>
 1. The pretrained model is trained on private dataset, which has large difference from authors data, so it performs struggling on author's data. You can test the model by feeding test_data.<br />
